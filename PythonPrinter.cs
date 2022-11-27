@@ -16,7 +16,8 @@ namespace PrintingPdfForPython
 {
     public class PythonPrinter
     {
-        public static void PythonPrint(String filepath, String printerName, String jobName, byte duplexMode, Int16 startPageRange, Int16 endPageRange, byte layoutMode) {
+        public static void PythonPrint(String filepath, String printerName, String jobName, byte duplexMode, Int16 startPageRange, Int16 endPageRange, byte layoutMode)
+        {
             PdfDocument document = new PdfDocument();
             foreach (string printer in PrinterSettings.InstalledPrinters)
             {
