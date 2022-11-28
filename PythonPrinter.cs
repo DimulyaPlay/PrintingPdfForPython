@@ -2,7 +2,6 @@
 using Spire.Pdf.Annotations;
 using Spire.Pdf.Annotations.Appearance;
 using Spire.Pdf.Graphics;
-using Spire.Pdf.Print;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -15,17 +14,10 @@ namespace PrintingPdfForPython
 {
     public class PythonPrinter
     {
-        public static void PythonPrint(String filepath, String printerName, String jobName, int duplexMode, int startPageRange, int endPageRange, byte layoutMode)
+        public static void PythonPrint(String filepath, String printerName, String jobName, int duplexMode)
         {
             PdfDocument document = new PdfDocument();
-            foreach (string printer in PrinterSettings.InstalledPrinters)
-            {
-                if (printer.Contains(printerName))
-                {
-                    document.PrintSettings.PrinterName = printer;
-                    break;
-                }
-            }
+            document.PrintSettings.PrinterName = printerName;
             document.PrintSettings.DocumentName = jobName;
             switch (duplexMode)
             {
@@ -38,58 +30,38 @@ namespace PrintingPdfForPython
                 case 2:
                     document.PrintSettings.Duplex = Duplex.Horizontal;
                     break;
-                default: break;
-            }
-            switch (layoutMode)
-            {
-                case 0:
-                    break;
-                case 1:
-                    // 2 on 1 portrait pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 1, false, PdfMultiPageOrder.Horizontal);
-                    break;
-                case 2:
-                    // 2 on 1 album pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 1, false, PdfMultiPageOrder.Vertical);
-                    break;
-                case 3:
-                    // 4 on 1 portrait pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 2, false, PdfMultiPageOrder.Vertical);
-                    break;
-                case 4:
-                    // 4 on 1 album pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 2, false, PdfMultiPageOrder.Horizontal);
+                default:
+                    document.PrintSettings.Duplex = Duplex.Default;
                     break;
             }
-            document.PrintSettings.SelectPageRange(startPageRange, endPageRange);
             document.LoadFromFile(filepath);
             document.PrintSettings.PrintController = new StandardPrintController();
-            document.Print();
+            try
+            {
+                document.Print();
+            }
+            catch (Exception e)
+            { 
             document.Close();
+            Console.Write(e);
+            }
+           
+            
         }
+
 
         public static String GeneratePdfFromImage(string filename)
         {
-            // Create a pdf document with a section and page added.
             PdfDocument pdf = new PdfDocument();
-            PdfSection section = pdf.Sections.Add();
             PdfPageBase page = pdf.Pages.Add();
-
-            //Load a tiff image from system
             PdfImage image = PdfImage.FromFile(filename);
-            //Set image display location and size in PDF
-            //Calculate rate
             float widthFitRate = image.PhysicalDimension.Width / page.Canvas.ClientSize.Width;
             float heightFitRate = image.PhysicalDimension.Height / page.Canvas.ClientSize.Height;
             float fitRate = Math.Max(widthFitRate, heightFitRate);
-            //Calculate the size of image 
             float fitWidth = image.PhysicalDimension.Width / fitRate;
             float fitHeight = image.PhysicalDimension.Height / fitRate;
-            //Draw image
-            page.Canvas.DrawImage(image, 0, 30, fitWidth, fitHeight);
-
+            page.Canvas.DrawImage(image, 0, 5, fitWidth, fitHeight);
             string output = filename + ".pdf";
-
             pdf.SaveToFile(output);
             pdf.Close();
             return output;
@@ -100,7 +72,6 @@ namespace PrintingPdfForPython
             var fileBytes = filenames.Select(File.ReadAllBytes).ToList();
             var resultFileBytes = PdfMerger.Merge(fileBytes);
             File.WriteAllBytes(filenames[0], resultFileBytes);
-
             if (isDel)
             {
                 for (int i = 1; i < filenames.Length; i++)
@@ -131,7 +102,6 @@ namespace PrintingPdfForPython
         }
 
 
-
         public static String AddStamp(String filename, String numAppeal, String numDoc)
         {
             PdfDocument document = new PdfDocument();
@@ -149,8 +119,10 @@ namespace PrintingPdfForPython
                 template.Graphics.DrawString("         ПОСТУПИЛ В \nЭЛЕКТРОННОМ ВИДЕ", font2, brush, new PointF(410, 35));
             }
             PdfRubberStampAnnotation stamp = new PdfRubberStampAnnotation(rectangle);
-            PdfAppearance apprearance = new PdfAppearance(stamp);
-            apprearance.Normal = template;
+            PdfAppearance apprearance = new PdfAppearance(stamp)
+            {
+                Normal = template
+            };
             stamp.Appearance = apprearance;
             page.AnnotationsWidget.Add(stamp);
             string output = filename;
