@@ -2,7 +2,6 @@
 using Spire.Pdf.Annotations;
 using Spire.Pdf.Annotations.Appearance;
 using Spire.Pdf.Graphics;
-using Spire.Pdf.Print;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -15,7 +14,7 @@ namespace PrintingPdfForPython
 {
     public class PythonPrinter
     {
-        public static void PythonPrint(String filepath, String printerName, String jobName, int duplexMode, int startPageRange, int endPageRange, byte layoutMode)
+        public static void PythonPrint(String filepath, String printerName, String jobName, int duplexMode)
         {
             PdfDocument document = new PdfDocument();
             foreach (string printer in PrinterSettings.InstalledPrinters)
@@ -40,28 +39,6 @@ namespace PrintingPdfForPython
                     break;
                 default: break;
             }
-            switch (layoutMode)
-            {
-                case 0:
-                    break;
-                case 1:
-                    // 2 on 1 portrait pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 1, false, PdfMultiPageOrder.Horizontal);
-                    break;
-                case 2:
-                    // 2 on 1 album pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 1, false, PdfMultiPageOrder.Vertical);
-                    break;
-                case 3:
-                    // 4 on 1 portrait pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 2, false, PdfMultiPageOrder.Vertical);
-                    break;
-                case 4:
-                    // 4 on 1 album pages
-                    document.PrintSettings.SelectMultiPageLayout(2, 2, false, PdfMultiPageOrder.Horizontal);
-                    break;
-            }
-            document.PrintSettings.SelectPageRange(startPageRange, endPageRange);
             document.LoadFromFile(filepath);
             document.PrintSettings.PrintController = new StandardPrintController();
             document.Print();
