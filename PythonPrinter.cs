@@ -1,22 +1,21 @@
-﻿using System;
-using System.Drawing.Printing;
-using Spire.Pdf;
+﻿using Spire.Pdf;
+using Spire.Pdf.Annotations;
+using Spire.Pdf.Annotations.Appearance;
 using Spire.Pdf.Graphics;
 using Spire.Pdf.Print;
+using System;
 using System.Drawing;
-using System.Reflection;
-using Spire.Pdf.Annotations.Appearance;
-using Spire.Pdf.Annotations;
-using System.Security.Cryptography.X509Certificates;
-using System.IO;
 using System.Drawing.Imaging;
-using Spire.Pdf.Exporting.Text;
+using System.Drawing.Printing;
+using System.IO;
+using System.Linq;
+using UglyToad.PdfPig.Writer;
 
 namespace PrintingPdfForPython
 {
     public class PythonPrinter
     {
-        public static void PythonPrint(String filepath, String printerName, String jobName, byte duplexMode, Int16 startPageRange, Int16 endPageRange, byte layoutMode)
+        public static void PythonPrint(String filepath, String printerName, String jobName, int duplexMode, int startPageRange, int endPageRange, byte layoutMode)
         {
             PdfDocument document = new PdfDocument();
             foreach (string printer in PrinterSettings.InstalledPrinters)
@@ -62,9 +61,7 @@ namespace PrintingPdfForPython
                     document.PrintSettings.SelectMultiPageLayout(2, 2, false, PdfMultiPageOrder.Horizontal);
                     break;
             }
-            document.PrintSettings.SelectPageRange(startPageRange,endPageRange);
-            document.PrintSettings.SelectSinglePageLayout(PdfSinglePageScalingMode.FitSize);
-            document.PrintSettings.SetPaperMargins(10, 10, 10, 10);
+            document.PrintSettings.SelectPageRange(startPageRange, endPageRange);
             document.LoadFromFile(filepath);
             document.PrintSettings.PrintController = new StandardPrintController();
             document.Print();
@@ -100,26 +97,13 @@ namespace PrintingPdfForPython
 
         public static String ConcatenatePDF(String[] filenames, bool isDel)
         {
-            PdfDocument[] documents = new PdfDocument[filenames.Length];
-            for(int i = 0; i < filenames.Length; i++)
-            {
-                documents[i] = new PdfDocument();
-                documents[i].LoadFromFile(filenames[i]);
-            }
+            var fileBytes = filenames.Select(File.ReadAllBytes).ToList();
+            var resultFileBytes = PdfMerger.Merge(fileBytes);
+            File.WriteAllBytes(filenames[0], resultFileBytes);
 
-            for(int i = 1; i < documents.Length; i++)
-            {
-                documents[0].AppendPage(documents[i]);
-            }
-            documents[0].SaveToFile(filenames[0], FileFormat.PDF);
-            foreach (PdfDocument document in documents)
-            {
-                document.Close();
-
-            }
             if (isDel)
             {
-                for (int i=1; i<filenames.Length; i++)
+                for (int i = 1; i < filenames.Length; i++)
                 {
                     File.Delete(filenames[i]);
                 }
@@ -127,9 +111,10 @@ namespace PrintingPdfForPython
             return filenames[0];
         }
 
-        public static String ExtractTextFromPdf(String filename) { 
+        public static String ExtractTextFromPdf(String filename)
+        {
             PdfDocument document = new PdfDocument();
-            document.LoadFromFile(filename);     
+            document.LoadFromFile(filename);
             PdfDocument pdf = new PdfDocument();
             pdf.LoadFromFile(filename);
             int pageIndex = 0;
@@ -152,12 +137,10 @@ namespace PrintingPdfForPython
             PdfDocument document = new PdfDocument();
             document.LoadFromFile(filename);
             PdfPageBase page = document.Pages[0];
-            PdfTemplate template = new PdfTemplate(125, 55);
-            PdfTrueTypeFont font1 = new PdfTrueTypeFont(new Font("Elephant", 10f, FontStyle.Italic), true);
-            PdfSolidBrush brush = new PdfSolidBrush(Color.DarkGray);
-            PdfPen pen = new PdfPen(brush);
+            PdfTemplate template = new PdfTemplate(600, 70);
+            PdfTrueTypeFont font1 = new PdfTrueTypeFont(new Font("Times New Roman", 8f, FontStyle.Bold), true);
+            PdfSolidBrush brush = new PdfSolidBrush(new PdfRGBColor(80, 80, 80));
             RectangleF rectangle = new RectangleF(new PointF(5, 5), template.Size);
-            PdfPath path = new PdfPath();
             template.Graphics.DrawString(numAppeal, font1, brush, new PointF(480, 10));
             template.Graphics.DrawString(numDoc, font1, brush, new PointF(480, 20));
             if ("Квитанция".Equals(numDoc))
@@ -170,10 +153,10 @@ namespace PrintingPdfForPython
             apprearance.Normal = template;
             stamp.Appearance = apprearance;
             page.AnnotationsWidget.Add(stamp);
-            string output = filename+"stamped.pdf";
+            string output = filename;
             document.SaveToFile(output);
             document.Close();
             return output;
-        }   
+        }
     }
 }
