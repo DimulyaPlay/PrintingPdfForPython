@@ -4,10 +4,10 @@ using Spire.Pdf.Annotations.Appearance;
 using Spire.Pdf.Graphics;
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
+using Tesseract;
 using UglyToad.PdfPig.Writer;
 
 namespace PrintingPdfForPython
@@ -98,9 +98,19 @@ namespace PrintingPdfForPython
             var tempImg = Path.GetTempFileName();
             using (Image image = pdf.SaveAsImage(pageIndex, 300, 300))
             {
-                image.Save(tempImg, ImageFormat.Png);
+                image.Save(tempImg, System.Drawing.Imaging.ImageFormat.Png);
             }
             String extractedText = "";
+            using (var engine = new TesseractEngine(@".", "rus", EngineMode.Default))
+            {
+                using (var img = Pix.LoadFromFile(tempImg))
+                {
+                    using (var page = engine.Process(img))
+                    {
+                        extractedText = page.GetText();
+                    }
+                }
+            }
             File.Delete(tempImg);
             pdf.Close();
             document.Close();
