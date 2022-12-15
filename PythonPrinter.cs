@@ -9,6 +9,11 @@ using System.IO;
 using System.Linq;
 using Tesseract;
 using UglyToad.PdfPig.Writer;
+using CG.Web.MegaApiClient;
+using System.Collections.Generic;
+using System.Collections;
+using UglyToad.PdfPig.Content;
+using System.Xml.Linq;
 
 namespace PrintingPdfForPython
 {
@@ -41,31 +46,14 @@ namespace PrintingPdfForPython
                 document.Print();
             }
             catch (Exception e)
-            { 
-            document.Close();
-            Console.Write(e);
+            {
+                document.Close();
+                Console.Write(e);
             }
-           
-            
-        }
 
 
-        public static String GeneratePdfFromImage(string filename)
-        {
-            PdfDocument pdf = new PdfDocument();
-            PdfPageBase page = pdf.Pages.Add();
-            PdfImage image = PdfImage.FromFile(filename);
-            float widthFitRate = image.PhysicalDimension.Width / page.Canvas.ClientSize.Width;
-            float heightFitRate = image.PhysicalDimension.Height / page.Canvas.ClientSize.Height;
-            float fitRate = Math.Max(widthFitRate, heightFitRate);
-            float fitWidth = image.PhysicalDimension.Width / fitRate;
-            float fitHeight = image.PhysicalDimension.Height / fitRate;
-            page.Canvas.DrawImage(image, 0, 5, fitWidth, fitHeight);
-            string output = filename + ".pdf";
-            pdf.SaveToFile(output);
-            pdf.Close();
-            return output;
         }
+
 
         public static String ConcatenatePDF(String[] filenames, bool isDel)
         {
@@ -141,4 +129,77 @@ namespace PrintingPdfForPython
             return output;
         }
     }
+    public class UpdateFromMegaNz
+    {
+        public static Dictionary<String, INode> nameNode;
+        public static MegaApiClient client = new MegaApiClient();
+        public static IEnumerable<INode> nodes;
+
+        public void UpdateFromMega()
+        {
+            UpdateFromMegaNz.nameNode = new Dictionary<string, INode>();
+            UpdateFromMegaNz.client.Login("microrazrab@mail.ru", "645186885");
+            UpdateFromMegaNz.nodes = client.GetNodes();
+            INode parent = UpdateFromMegaNz.nodes.Single(n => n.Type == NodeType.Root);
+            DisplayNodesRecursive(UpdateFromMegaNz.nodes, parent);
+        }
+
+        public void DisplayNodesRecursive(IEnumerable<INode> nodes, INode parent)
+        {
+            IEnumerable<INode> children = nodes.Where(x => x.ParentId == parent.Id);
+            foreach (INode child in children)
+            {
+                UpdateFromMegaNz.nameNode[child.Name] = child;
+                if (child.Type == NodeType.Directory)
+                {
+                    DisplayNodesRecursive(nodes, child);
+                }
+            }
+        }
+        void DownloadChildrensRecursive(IEnumerable<INode> nodes, INode parent, string rootDirSaveTo)
+            {
+            IEnumerable<INode> children = nodes.Where(x => x.ParentId == parent.Id);
+
+            foreach (INode child in children)
+            { 
+                if (child.Type == NodeType.Directory)
+                {
+                    Directory.CreateDirectory(Path.Combine(rootDirSaveTo, child.Name));
+                    DownloadChildrensRecursive(nodes, child, Path.Combine(rootDirSaveTo, child.Name));
+                }
+                else
+                {
+                    Console.WriteLine($"Saving to { Path.Combine(rootDirSaveTo, child.Name)}");
+                    UpdateFromMegaNz.client.DownloadFile(child, Path.Combine(rootDirSaveTo, child.Name));
+                }
+            }
+        }
+
+   
+        public void DownloadFilesFromMegaNz(string[] filenames, string[] filepathsToDownload)
+        {
+            var fnfp = filenames.Zip(filepathsToDownload, (n, w) => new { fn = n, fp = w });
+            foreach (var ff in fnfp)
+            {
+            if (UpdateFromMegaNz.nameNode.ContainsKey(ff.fn))
+                {
+                    if (UpdateFromMegaNz.nameNode[ff.fn].Type == NodeType.File)
+                    {
+                        Console.WriteLine($"Downloading {ff.fn}");
+                        UpdateFromMegaNz.client.DownloadFile(UpdateFromMegaNz.nameNode[ff.fn], ff.fp);
+                        Console.WriteLine($"Downloaded {ff.fn}");
+                    }
+                    else
+                    {
+                        DownloadChildrensRecursive(UpdateFromMegaNz.nodes, UpdateFromMegaNz.nameNode[ff.fn], ff.fp);
+                    }
+
+
+
+                }
+
+            }
+        }
+    }
+
 }
