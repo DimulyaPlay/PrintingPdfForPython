@@ -132,12 +132,14 @@ namespace PrintingPdfForPython
     public class UpdateFromMegaNz
     {
         public static Dictionary<String, INode> nameNode;
+        public static Dictionary<String, long> nameSize;
         public static MegaApiClient client = new MegaApiClient();
         public static IEnumerable<INode> nodes;
 
         public void UpdateFromMega()
         {
             UpdateFromMegaNz.nameNode = new Dictionary<string, INode>();
+            UpdateFromMegaNz.nameSize = new Dictionary<string, long>();
             UpdateFromMegaNz.client.Login("microrazrab@mail.ru", "645186885");
             UpdateFromMegaNz.nodes = client.GetNodes();
             INode parent = UpdateFromMegaNz.nodes.Single(n => n.Type == NodeType.Root);
@@ -150,6 +152,7 @@ namespace PrintingPdfForPython
             foreach (INode child in children)
             {
                 UpdateFromMegaNz.nameNode[child.Name] = child;
+                UpdateFromMegaNz.nameSize[child.Name] = child.Size;
                 if (child.Type == NodeType.Directory)
                 {
                     DisplayNodesRecursive(nodes, child);
@@ -159,11 +162,12 @@ namespace PrintingPdfForPython
         void DownloadChildrensRecursive(IEnumerable<INode> nodes, INode parent, string rootDirSaveTo)
             {
             IEnumerable<INode> children = nodes.Where(x => x.ParentId == parent.Id);
-
             foreach (INode child in children)
-            { 
+            {
+                Console.WriteLine($"node {child.Name} type: {child.Type}");
                 if (child.Type == NodeType.Directory)
                 {
+                    Console.WriteLine($"Creating dir {Path.Combine(rootDirSaveTo, child.Name)}");
                     Directory.CreateDirectory(Path.Combine(rootDirSaveTo, child.Name));
                     DownloadChildrensRecursive(nodes, child, Path.Combine(rootDirSaveTo, child.Name));
                 }
@@ -191,11 +195,10 @@ namespace PrintingPdfForPython
                     }
                     else
                     {
+                        Console.WriteLine($"Creating dir {Path.Combine(ff.fp, ff.fn)}");
+                        Directory.CreateDirectory(Path.Combine(ff.fp, ff.fn));
                         DownloadChildrensRecursive(UpdateFromMegaNz.nodes, UpdateFromMegaNz.nameNode[ff.fn], ff.fp);
                     }
-
-
-
                 }
 
             }
